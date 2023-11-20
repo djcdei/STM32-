@@ -51,7 +51,7 @@ volatile uint32_t g_rtc_alarm_event = 0;		//RTC闹钟A事件
 volatile uint32_t g_rtc_reset = 0;				//RTC时间计数复位标志
 uint8_t redata; // 存储接收的数据
 uint8_t dht11_buf[5]; // 存储温湿度模块读取到的数据
-uint8_t w25qxx_recvbuf[8];
+
 int32_t dht11_read_ret;//温湿度读取函数返回值
 typedef struct __flash_t
 {
@@ -684,7 +684,7 @@ void w25qxx_init(void)
 	//使能SPI1工作
 	SPI_Cmd(SPI1, ENABLE);
 #else
-	w25qxx_simulate_init();
+	w25qxx_simulate_init();//模拟spi初始化
 #endif
 }
 
@@ -756,7 +756,100 @@ void w25qxx_read_id(uint8_t *m_id,uint8_t *d_id)
 	PBout(14)=1;
 }
 
-/*读取spi数据根据W25Q128S资料手册26页时序图编写*/
+//spi写使能 WRITE ENABLE
+void w25qxx_write_enable(void)
+{
+	//cs引脚拉低，从机开始工作
+	W25Q128_CS=0;
+	//发送0x06
+	SPI1_SendByte(0x06);
+	//CS引脚为高电平，从机停止工作
+	W25Q128_CS=1;
+}
+//spi写不使能 WRITE DISABLE
+void w25qxx_write_disable(void)
+{
+	W25Q128_CS=0;
+	SPI1_SendByte(0x04);
+	W25Q128_CS=1;
+}
+
+//读寄存器 Read Status Register的状态
+uint8_t read_status_register(void)
+{
+	uint8_t sta;
+	W25Q128_CS=0;
+	SPI1_SendByte(0x05);
+	//发送任意8位bit数据，获取寄存器状态
+	sta = SPI1_SendByte(0xFF);
+	W25Q128_CS=1;
+	return sta;	
+}
+
+//spi flash扇区擦除(sector erase)
+void w25qxx_sector_erase(uint32_t sector_addr)//选择扇区地址
+{
+	uint8_t sta;
+	//写使能
+	w25qxx_write_enable();
+	delay_us(1);
+	W25Q128_CS=0;//从机开始工作
+	//发送0x20扇区擦除指令
+	SPI1_SendByte(0x20);
+	//发送24bits的地址数据
+	SPI1_SendByte((sector_addr >> 16) & 0xFF);
+	SPI1_SendByte((sector_addr >> 8) & 0xFF);
+	SPI1_SendByte(sector_addr & 0xFF);
+	//监测read status register寄存器的BUSY 比特位是否为0（表示数据擦除完毕）
+	while(1)
+	{
+		sta=read_status_register();
+		if((sta & 0x01)==0x00)
+			break;
+		delay_us(1);
+	}
+		
+	w25qxx_write_disable();
+}
+
+//spi flash页编程(page program)参数：扇区首地址、数据首地址、数据长度
+void w25qxx_page_program(uint32_t page_addr,uint8_t *buf,uint32_t len)
+{
+	uint8_t sta;
+	uint8_t *p=buf;
+	//写使能
+	w25qxx_write_enable();
+	//发送0x02页编程指令
+	SPI1_SendByte(0x02);
+	//发送24bits的地址数据
+	SPI1_SendByte((page_addr >> 16) & 0xFF);
+	SPI1_SendByte((page_addr >> 8) & 0xFF);
+	SPI1_SendByte(page_addr & 0xFF);
+	
+	//判断len是否超过256.超过则要进行新一轮页编程
+	len = len > 256 ? 256 : len;
+	//逐位写入buf中的数据
+	while(len--)
+	{
+		SPI1_SendByte(*p);
+		p++;
+	}
+	
+	//CS引脚为高电平，从机停止工作
+	W25Q128_CS=1;
+
+	delay_us(1);
+	//监测read status register寄存器的BUSY 比特位是否为0（表示数据擦除完毕）
+	while(1)
+	{
+		sta=read_status_register();
+		if((sta & 0x01)==0x00)
+			break;
+		delay_us(1);
+	}
+	w25qxx_write_disable();
+}
+//读取spi数据根据W25Q128S资料手册26页时序图编写,参数：起始地址、存放读取数据的缓冲区，要读取的数据长度
 void w25qxx_read_data(uint32_t addr,uint8_t *buf,uint32_t len)
 {
 	uint8_t *p = buf;
@@ -764,7 +857,7 @@ void w25qxx_read_data(uint32_t addr,uint8_t *buf,uint32_t len)
 	//CS引脚为低电平，从机开始工作
 	W25Q128_CS=0;
 	
-	//先发送0x03
+	//先发送0x03 读取数据指令
 	SPI1_SendByte(0x03);
 
 	//发送24bit地址（高地址先发送）巧妙的方法
@@ -774,9 +867,8 @@ void w25qxx_read_data(uint32_t addr,uint8_t *buf,uint32_t len)
 	
 	while(len--)
 	{
-		//得到厂商ID，参数为任意值
+		//每次读取1byte的数据
 		*p=SPI1_SendByte(0xFF);
-		
 		p++;
 	}
 	//CS引脚为高电平，从机停止工作
@@ -1090,10 +1182,9 @@ int main(void)
 	uint8_t d_id;		//spi设备id
 	uint8_t m_id;		//spi flash厂商id
 	uint32_t duty;		//PWM占空比	
-	uint32_t __IO Temp_cnt=0;//温度测量次数
-	
 	int32_t distance_save = 0;//超声波测距安全等级
-
+	int32_t i;					//一个计数值
+	uint8_t w25qxx_buf[64]={0};
 	// int pwm_cmp;
 	// 打开端口硬件时钟，就是对当前硬件供电
 	RCC_AHB1PeriphClockCmd(RCC_AHB1Periph_GPIOF, ENABLE);
@@ -1147,9 +1238,24 @@ int main(void)
 		rtc_wakeup_init();//实时时钟RTC初始化
 	}
 	
-	w25qxx_read_id(&m_id,&d_id);
-	
+	w25qxx_read_id(&m_id,&d_id);//获取spi设备id和厂商id
 	printf("m_id:%x,d_id:%x\r\n",m_id,d_id);
+	w25qxx_sector_erase(0);//擦除扇区0
+	memset(w25qxx_buf,'a',sizeof(w25qxx_buf));
+	//向0地址写入w25qxx_buf里面的数据
+	w25qxx_page_program(0,w25qxx_buf,sizeof(w25qxx_buf));
+	memset(w25qxx_buf,0,sizeof(w25qxx_buf));
+	//从0地址开始读取数据
+	w25qxx_read_data(0,w25qxx_buf,sizeof(w25qxx_buf));
+	printf("read addr at 0:\r\n");
+	
+	for(i=0; i<64; i++)
+	{
+		printf("%c ",w25qxx_buf[i]);
+	}
+	
+	printf("\r\n");
+	
 	
 	while (1)
 	{
