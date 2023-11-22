@@ -5,6 +5,11 @@
             "includePath": [
                 "d:\\STM32Project\\蓝牙超声波倒车雷达\\RTE\\Device\\STM32F407ZE",
                 "d:\\STM32Project\\蓝牙超声波倒车雷达\\RTE",
+                "d:\\STM32Project\\蓝牙超声波倒车雷达\\MFRC522",
+                "d:\\STM32Project\\蓝牙超声波倒车雷达\\SYSTEM\\sys",
+                "d:\\STM32Project\\蓝牙超声波倒车雷达\\SYSTEM\\delay",
+                "d:\\STM32Project\\蓝牙超声波倒车雷达\\HARDWARE\\BEEP",
+                "d:\\STM32Project\\蓝牙超声波倒车雷达\\HARDWARE\\OLED",
                 "D:\\Keil_v5\\ARM\\ARMCC\\include",
                 "D:\\Keil_v5\\ARM\\ARMCC\\include\\rw",
                 "d:\\STM32Project\\蓝牙超声波倒车雷达"

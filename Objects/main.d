@@ -1,4 +1,5 @@
 .\objects\main.o: main.c
+.\objects\main.o: .\SYSTEM\sys\sys.h
 .\objects\main.o: D:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\1.0.8\Device\Include\stm32f4xx.h
 .\objects\main.o: D:\Keil_v5\ARM\PACK\ARM\CMSIS\4.2.0\CMSIS\Include\core_cm4.h
 .\objects\main.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
@@ -22,6 +23,15 @@
 .\objects\main.o: D:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\1.0.8\Device\StdPeriph_Driver\inc\stm32f4xx_tim.h
 .\objects\main.o: D:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\1.0.8\Device\StdPeriph_Driver\inc\stm32f4xx_usart.h
 .\objects\main.o: D:\Keil_v5\ARM\PACK\Keil\STM32F4xx_DFP\1.0.8\Device\StdPeriph_Driver\inc\misc.h
+.\objects\main.o: .\SYSTEM\delay\delay.h
+.\objects\main.o: .\HARDWARE\BEEP\beep.h
+.\objects\main.o: .\HARDWARE\OLED\oled.h
+.\objects\main.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
+.\objects\main.o: .\HARDWARE\OLED\bmp.h
+.\objects\main.o: .\HARDWARE\DHT11\dht11.h
+.\objects\main.o: .\HARDWARE\SR04\sr04.h
+.\objects\main.o: .\HARDWARE\FLASH\flash.h
+.\objects\main.o: .\HARDWARE\W25Q128\w25q128.h
+.\objects\main.o: .\HARDWARE\MFRC522\MFRC522.h
 .\objects\main.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
 .\objects\main.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
-.\objects\main.o: D:\Keil_v5\ARM\ARMCC\Bin\..\include\stdlib.h
